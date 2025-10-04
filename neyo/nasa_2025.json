@@ -1,0 +1,22 @@
+[
+  {
+    "id": "earth_2025",
+    "name": "Earth",
+    "x": 5000,
+    "y": 3000,
+    "tiles_base": "https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/VIIRS_SNPP_DayNightBand_ENCC/2025-01-01/{z}/{y}/{x}.jpg",
+    "tile_levels": 8,
+    "width": 40000,
+    "height": 40000
+  },
+  {
+    "id": "mars_2025",
+    "name": "Mars",
+    "x": 8000,
+    "y": 4500,
+    "tiles_base": "https://mars.nasa.gov/system/news_items/main_images/10616_PIA25681-Figure1.jpg",
+    "tile_levels": 6,
+    "width": 40000,
+    "height": 40000
+  }
+]

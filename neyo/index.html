@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NASA 2025 Zoomable Viewer</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+  <div id="map"></div>
+  <div id="image-popup" class="hidden">
+    <span id="close-popup">X</span>
+    <div id="tile-map"></div>
+    <div id="metadata"></div>
+  </div>
+  <script src="https://hla.stsci.edu/cgi-bin/display?image=hlsp_appp_hst_wfpc2_sfd-pu4k2ho01_f606w_v2_sci&izoom=1.000000&detector=WFPC2&aperture=%20&title=appp_hst_wfpc2_sfd-pu4k2ho01%20WFPC2%20F606W%20(hlsp)%20APPP"></script>
+  <script src="script.js"></script>
+</body>
+</html>
