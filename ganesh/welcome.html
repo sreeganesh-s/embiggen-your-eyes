@@ -372,15 +372,21 @@
         lookBtn.style.opacity = '0.6';
         lookBtn.style.cursor = 'not-allowed';
       }
-      // Begin button behavior
+      // Begin button behavior — pulse, then redirect to the Space Explorer
+      // The target page already includes its own `styles.css` and `script.js`.
       const beginBtn = document.getElementById('beginBtn');
       const hero = document.getElementById('hero');
       if (beginBtn && hero) {
         beginBtn.addEventListener('click', (e) => {
           e.preventDefault();
           hero.classList.add('begun');
-          // quick pulse and remove class after animation
-          setTimeout(() => hero.classList.remove('begun'), 400);
+          // After the small pulse animation, navigate to the space explorer index.
+          setTimeout(() => {
+            // restore state (optional)
+            hero.classList.remove('begun');
+            // Redirect to the index that loads styles.css and script.js
+            window.location.href = '../chris/space_explorer/index.html';
+          }, 400);
         });
       }
     })();
