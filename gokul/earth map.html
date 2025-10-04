@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive World Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+<style>
+  body { margin: 0; font-family: sans-serif; }
+  #map { height: 100vh; width: 100vw; background-color: #f0f8ff; }
+  .country-label {
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 4px;
+    padding: 5px;
+    font-weight: bold;
+    text-align: center;
+    border: none;
+    box-shadow: none;
+  }
+  .leaflet-popup-content-wrapper {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+  }
+  .leaflet-popup-content {
+    font-size: 1.1em;
+    text-align: center;
+  }
+  .leaflet-popup-tip {
+    background: #fff;
+  }
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script>
+  // 1. Initialize the map
+  const map = L.map('map', {
+    center: [25, 80], // Initial center on Asia
+    zoom: 3,         // Initial zoom level
+    minZoom: 2,      // Minimum zoom to prevent users from getting lost
+    maxBounds: [[-90, -180], [90, 180]], // Lock panning to the world
+    maxBoundsViscosity: 1.0 // Makes the bounds fully solid
+  });
+
+  // 2. Add a base tile layer (the map background)
+  const baseLayers = {
+    'Default': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd'
+    }),
+    'Dark Mode': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd'
+    }),
+    'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+	    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+    })
+  };
+  
+  baseLayers['Default'].addTo(map); // Add the default layer to the map initially
+  L.control.layers(baseLayers).addTo(map); // Add the layer control
+
+  // 3. Fetch country data
+  const geoJsonUrl = 'https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json';
+
+  fetch(geoJsonUrl)
+    .then(res => res.json())
+    .then(countryData => {
+    
+    let countryLayers;
+
+    function updateLabels() {
+      const zoomLevel = map.getZoom();
+      if (!countryLayers) return;
+
+      countryLayers.eachLayer(layer => {
+        if (zoomLevel > 3) {
+          layer.openTooltip();
+        } else {
+          layer.closeTooltip();
+        }
+      });
+    }
+
+    countryLayers = L.geoJSON(countryData, {
+      style: {
+        color: "#4a83ec",
+        weight: 1,
+        opacity: 0.6,
+        fillOpacity: 0.1
+      },
+      onEachFeature: (feature, layer) => {
+        const countryName = feature.properties.name;
+        
+        // Bind a tooltip for the country name, but keep it closed initially
+        layer.bindTooltip(countryName, {
+          permanent: true, // Permanent, but we control visibility with open/close
+          direction: 'center', 
+          className: 'country-label'
+        });
+
+        // Highlight country on hover
+        layer.on('mouseover', function (e) {
+          this.setStyle({
+            weight: 2,
+            fillColor: '#ffc107',
+            fillOpacity: 0.3
+          });
+        });
+        layer.on('mouseout', function (e) {
+          L.geoJSON().resetStyle(this); // Use a new GeoJSON instance to reset
+        });
+
+        // Zoom to country on click
+        layer.on('click', function(e) {
+          map.fitBounds(e.target.getBounds());
+        });
+      }
+    }).addTo(map);
+
+    map.on('zoom', updateLabels); // Update labels on zoom
+    updateLabels(); // Initial check
+  })
+  .catch(error => console.error('Error loading map data:', error));
+
+</script>
+
+</body>
+</html>
