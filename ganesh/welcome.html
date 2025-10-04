@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Infinite Space Scroll</title>
+  <style>
+    /* General Setup */
+    body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      color: white;
+      font-family: sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* Unified background layer (stars + twinkle + nebula) */
+    .space {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -3;
+      pointer-events: none;
+
+      /* Layered backgrounds: base star texture + soft nebula gradients */
+      background:
+        radial-gradient(circle at 20% 30%, rgba(255,255,255,0.04), transparent 45%),
+        radial-gradient(circle at 70% 50%, rgba(200,200,255,0.03), transparent 55%),
+        radial-gradient(circle at 50% 80%, rgba(255,200,255,0.03), transparent 45%),
+        url('https://www.transparenttextures.com/patterns/stardust.png') repeat,
+        #000;
+      background-size: 100% 100%, 100% 100%, 100% 100%, 400px 400px, auto;
+      background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat;
+      filter: none;
+      will-change: background-position, opacity;
+      animation: space-move 120s linear infinite;
+    }
+
+    /* Small twinkling dots applied with a pseudo-element so text isn't affected */
+    .space::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.95) 1px, rgba(0,0,0,0) 1.5px);
+      background-size: 350px 350px;
+      opacity: 0.9;
+      mix-blend-mode: screen;
+      animation: twinkle 4s ease-in-out infinite, space-move 200s linear infinite;
+      pointer-events: none;
+    }
+
+    /* Content Area */
+    .content {
+      position: relative;
+      z-index: 1;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+      text-align: center;
+      /* Remove dark blurred overlay so text is not placed under a darkening layer */
+      background-color: transparent;
+      border-radius: 0;
+      min-height: 500vh;
+      /* Improve legibility without an overlay */
+      text-shadow: 0 2px 8px rgba(0,0,0,0.75);
+    }
+
+    /* Viewport and world for 360-degree panning */
+    #viewport {
+      position: fixed;
+      inset: 0;
+      overflow: hidden; /* hide world overflow visually but world can be translated */
+      touch-action: none; /* we'll handle touch gestures */
+      cursor: grab;
+    }
+
+    #viewport.grabbing { cursor: grabbing; }
+
+    /* Controls (Enter Look Mode) */
+    .controls {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      z-index: 10010;
+      pointer-events: auto; /* make sure controls are clickable */
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .controls button {
+      background: rgba(255,255,255,0.06);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.08);
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+    }
+
+    .controls button.active { background: rgba(255,255,255,0.18); }
+
+    #world {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%); /* center world origin */
+      transform-origin: 50% 50%;
+      width: 20000px; /* very large world area */
+      height: 20000px;
+      pointer-events: auto;
+    }
+
+    /* .space spans the viewport and stays behind world content (z-index set above) */
+
+    /* markers and preview removed — page is visual-only and static */
+
+    /* Section Blocks */
+    .section {
+      height: 150vh;
+      /* Fully transparent sections — no square shade or border */
+      background-color: transparent;
+      padding: 20px;
+      margin-top: 50px;
+      border-radius: 0;
+      border: none;
+    }
+
+    /* Parallax / Animations */
+    @keyframes space-move {
+      0%   { background-position: 0% 0%, 0% 0%, 0% 0%, 0 0, 0 0; }
+      25%  { background-position: 25% 10%, 50% 25%, 10% 50%, -2000px 800px, 0 0; }
+      50%  { background-position: 50% 0%, 100% 10%, 20% 80%, -4000px 1600px, 0 0; }
+      75%  { background-position: 75% -10%, 50% -25%, 40% 60%, -6000px 1200px, 0 0; }
+      100% { background-position: 0% 0%, 0% 0%, 0% 0%, 0 0, 0 0; }
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.95; }
+      50% { opacity: 0.6; }
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .content {
+        padding: 10px;
+        font-size: 90%;
+      }
+
+      .section {
+        height: 100vh;
+        padding: 15px;
+      }
+    }
+    /* Hero styles */
+    .hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 60px 20px;
+      margin-top: 40px;
+      user-select: none;
+    }
+
+    .hero-title {
+      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+      font-weight: 800;
+      font-size: 48px;
+      letter-spacing: 2px;
+      line-height: 1;
+      text-transform: uppercase;
+      color: white;
+      position: relative;
+      overflow: visible;
+    }
+
+    .hero-title .letter {
+      display: inline-block;
+      transform: translateY(18px) rotate(-2deg) scale(0.98);
+      opacity: 0;
+      color: #fff;
+      text-shadow: 0 6px 24px rgba(123, 77, 255, 0.18), 0 2px 6px rgba(0,0,0,0.6);
+    }
+
+    .hero-title.reveal .letter {
+      transform: translateY(0) rotate(0deg) scale(1);
+      opacity: 1;
+      transition: transform 600ms cubic-bezier(.2,.9,.3,1), opacity 420ms ease;
+    }
+
+    /* shimmering gradient overlay */
+    .hero-title::after {
+      content: '';
+      position: absolute;
+      left: -20%;
+      top: 0;
+      width: 140%;
+      height: 100%;
+      background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.22), rgba(255,255,255,0.02));
+      transform: translateX(-60%);
+      mix-blend-mode: screen;
+      opacity: 0.8;
+      animation: shimmer 3.6s linear infinite;
+      pointer-events: none;
+    }
+
+    @keyframes shimmer { 0% { transform: translateX(-60%);} 50% { transform: translateX(20%);} 100% { transform: translateX(160%);} }
+
+    .hero-subtitle {
+      font-size: 18px;
+      opacity: 0.95;
+      color: #dfe7ff;
+      letter-spacing: 1px;
+    }
+
+    .hero-subtitle .team {
+      color: #ffd166;
+      font-weight: 700;
+      text-shadow: 0 2px 10px rgba(255,209,102,0.12);
+    }
+
+    .hero-cta button {
+      background: linear-gradient(135deg, rgba(99,102,241,0.95), rgba(139,92,246,0.95));
+      border: none;
+      color: white;
+      padding: 12px 18px;
+      border-radius: 999px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 28px rgba(99,102,241,0.18);
+      transition: transform 180ms ease, box-shadow 180ms ease;
+    }
+
+    /* specific styling for LET'S BEGIN button in the fixed hero */
+    .hero.fixed .hero-cta { margin-top: 12px; }
+    .hero.fixed .hero-cta button { padding: 14px 22px; font-size: 15px; letter-spacing: 1px; }
+
+    .hero-cta button:active { transform: translateY(1px) scale(0.997); }
+
+    @media (max-width: 900px) {
+      .hero-title { font-size: 36px; }
+      .hero-subtitle { font-size: 16px; }
+    }
+    .hero-line { display: block; }
+    /* Fixed hero overlay */
+    .hero.fixed {
+      position: fixed;
+      left: 50%;
+      top: 12vh;
+      transform: translateX(-50%);
+      z-index: 10005;
+      pointer-events: auto;
+      text-align: center;
+      /* remove backdrop blur so underlying world content is not blurred */
+      padding: 18px 28px;
+      border-radius: 12px;
+      background: linear-gradient(180deg, rgba(6,8,24,0.88), rgba(10,12,30,0.8));
+      box-shadow: 0 10px 30px rgba(3,6,20,0.6);
+    }
+    /* small visual response when user clicks LET'S BEGIN */
+    .hero.fixed.begun {
+      transform: translateX(-50%) scale(0.985);
+      transition: transform 360ms cubic-bezier(.2,.9,.3,1);
+      box-shadow: 0 14px 38px rgba(3,6,20,0.7);
+    }
+  </style>
+</head>
+<body>
+  <div id="viewport">
+    <div class="space"></div>
+
+  <div id="world">
+      <!-- world intentionally empty: no markers/images -->
+  </div>
+
+    </div>
+
+    <!-- fixed HUD content: small overlay that stays still (pass-through) -->
+    <!-- Hero is a fixed overlay (outside the world) so text doesn't move while panning -->
+    <div class="hero fixed" id="hero">
+      <h1 class="hero-title" id="heroTitle">
+        <span class="hero-line">WELCOME TO EMBIGGEN</span>
+        <span class="hero-line">YOUR EYES</span>
+      </h1>
+      <div class="hero-subtitle">by <span class="team">chakkakkuru</span></div>
+      <div class="hero-cta">
+        <button id="beginBtn">LET'S BEGIN</button>
+      </div>
+    </div>
+  </div>
+  <div class="controls">
+    <button id="lookBtn" title="Enter Look Mode (pointer lock)">Enter Look Mode</button>
+  </div>
+  <script>
+    // Hero animations: split each hero-line into letters and animate per-line
+    (function() {
+      const heroTitle = document.getElementById('heroTitle');
+      if (!heroTitle) return;
+
+      const lines = Array.from(heroTitle.querySelectorAll('.hero-line'));
+      if (lines.length === 0) {
+        // fallback: treat entire title as single line
+        lines.push(heroTitle);
+      }
+
+      lines.forEach((lineEl, lineIndex) => {
+        const text = lineEl.textContent.trim();
+        lineEl.textContent = '';
+        for (let i = 0; i < text.length; i++) {
+          const ch = document.createElement('span');
+          ch.className = 'letter';
+          ch.textContent = text[i] === ' ' ? '\u00A0' : text[i];
+          // stagger per-line and per-letter
+          const delay = lineIndex * 200 + i * 28;
+          ch.style.transitionDelay = delay + 'ms';
+          lineEl.appendChild(ch);
+        }
+      });
+
+      // entrance animation
+      requestAnimationFrame(() => {
+        heroTitle.classList.add('reveal');
+      });
+
+      // small parallax on pointer move
+      const hero = document.getElementById('hero');
+      hero.addEventListener('pointermove', (e) => {
+        const rect = hero.getBoundingClientRect();
+        const cx = rect.left + rect.width/2;
+        const cy = rect.top + rect.height/2;
+        const dx = (e.clientX - cx) / rect.width;
+        const dy = (e.clientY - cy) / rect.height;
+        heroTitle.style.transform = `translate3d(${dx*6}px, ${dy*6}px, 0)`;
+      });
+      hero.addEventListener('pointerleave', () => {
+        heroTitle.style.transform = '';
+      });
+
+      // prevent starting a world pan when interacting with hero controls
+      hero.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+      });
+
+      // CTA button scrolls to world center
+      const enterBtn = document.getElementById('enterBtn');
+      if (enterBtn) {
+        enterBtn.addEventListener('click', () => {
+          // smoothly pan world a bit for effect
+          const world = document.getElementById('world');
+          if (!world) return;
+          // move world by small offset
+          world.style.transition = 'transform 800ms cubic-bezier(.22,.9,.32,1)';
+          world.style.transform = `translate(calc(-50% + 200px), calc(-50% + 150px))`;
+          setTimeout(() => world.style.transition = '', 900);
+        });
+      }
+    })();
+    // World is static now: panning, pointer-lock and marker interactions removed
+    (function() {
+      // keep world centered and non-interactive
+      const world = document.getElementById('world');
+      if (world) world.style.transform = 'translate(-50%, -50%)';
+      // disable look button visually
+      const lookBtn = document.getElementById('lookBtn');
+      if (lookBtn) {
+        lookBtn.disabled = true;
+        lookBtn.title = 'Look Mode disabled in static view';
+        lookBtn.style.opacity = '0.6';
+        lookBtn.style.cursor = 'not-allowed';
+      }
+      // Begin button behavior
+      const beginBtn = document.getElementById('beginBtn');
+      const hero = document.getElementById('hero');
+      if (beginBtn && hero) {
+        beginBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          hero.classList.add('begun');
+          // quick pulse and remove class after animation
+          setTimeout(() => hero.classList.remove('begun'), 400);
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
