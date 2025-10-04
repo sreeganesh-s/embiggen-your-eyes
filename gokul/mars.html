@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Zoomable Mars Surface (Pure HTML/CSS/JS)</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
+  <style>
+    html,body{height:100%;margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;background:#000}
+    #toolbar{position:fixed;left:12px;top:12px;z-index:1000;background:rgba(0,0,0,0.55);color:#fff;padding:8px;border-radius:8px;backdrop-filter:blur(4px)}
+    #toolbar button{padding:6px 8px;margin-right:6px;border-radius:4px;border:none;background:#1976d2;color:#fff;cursor:pointer}
+    #viewer{width:100%;height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none}
+
+    /* image container & image */
+    .img-wrap{transform-origin:0 0;will-change:transform;cursor:grab}
+    .img-wrap.dragging{cursor:grabbing}
+    img.zoom-img{display:block;max-width:none;-webkit-user-drag:none;user-select:none;pointer-events:none}
+
+    #cornerVideoContainer {
+      position: fixed;
+      right: 12px;
+      bottom: 12px;
+      z-index: 2000;
+      width: 320px;
+      max-width: 40vw;
+      background: rgba(0,0,0,0.7);
+      border-radius: 8px;
+      padding: 8px;
+      backdrop-filter: blur(4px);
+      color: #fff;
+      font-size: 12px;
+    }
+    #cornerVideo {
+      display: none;
+      width: 100%;
+      border-radius: 4px;
+    }
+    #cornerVideoContainer button {
+      width: 100%;
+      margin-top: 8px;
+    }
+    #cornerVideoContainer p {
+        margin: 0 0 8px;
+        text-align: center;
+    }
+
+    /* small responsive adjustments */
+    @media (max-width:600px){#toolbar input{width:200px}}
+
+    #gallery{
+      position:fixed;
+      left: 12px;
+      bottom: 12px;
+      z-index:1000;
+      background:rgba(0,0,0,0.55);
+      color:#fff;
+      padding:8px;
+      border-radius:8px;
+      backdrop-filter:blur(4px);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    #gallery img {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      cursor: pointer;
+      border-radius: 4px;
+      border: 2px solid transparent;
+      transition: border-color 0.2s;
+    }
+    #gallery img:hover, #gallery img.active {
+      border-color: #1976d2;
+    }
+
+    .spinner {
+      position: absolute;
+      z-index: 1;
+      width: 50px;
+      height: 50px;
+      border: 6px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="toolbar">
+    <button id="zoomIn">＋</button>
+    <button id="zoomOut">－</button>
+    <button id="reset">Reset</button>
+    <button id="prevBtn">← Prev</button>
+    <button id="nextBtn">Next →</button>
+  </div>
+
+  <div id="viewer" role="region" aria-label="Zoomable Mars viewer">
+    <div id="spinner" class="spinner" style="display: none;"></div>
+    <div id="imgWrap" class="img-wrap">
+      <img id="zoomImg" class="zoom-img" alt="Mars surface" src="" />
+    </div>
+  </div>
+
+  <div id="gallery">
+    <img src="https://cdn.pixabay.com/photo/2023/01/16/19/06/mars-7723123_640.jpg" data-full-src="https://cdn.pixabay.com/photo/2023/01/16/19/06/mars-7723123_1280.jpg" alt="Mars Illustration" class="active">
+    <img src="https://helios-i.mashable.com/imagery/articles/05T36vnQRk5Hu0xY37fTrQ3/hero-image.fill.size_1200x675.v1680730248.jpg" data-full-src="https://helios-i.mashable.com/imagery/articles/05T36vnQRk5Hu0xY37fTrQ3/hero-image.fill.size_1200x675.v1680730248.jpg" alt="Mars Rover">
+    <img src="https://wallpaperaccess.com/full/4031989.jpg" data-full-src="https://wallpaperaccess.com/full/4031989.jpg" alt="Mars Surface">
+    <img src="https://d2pn8kiwq2w21t.cloudfront.net/images/jpegPIA24423.width-800.jpg" data-full-src="https://d2pn8kiwq2w21t.cloudfront.net/images/jpegPIA24423.width-1600.jpg" alt="Perseverance Rover's First Panorama">
+    <img src="https://d2pn8kiwq2w21t.cloudfront.net/images/jpegPIA24543.width-800.jpg" data-full-src="https://d2pn8kiwq2w21t.cloudfront.net/images/jpegPIA24543.width-1600.jpg" alt="Curiosity Rover at Mont Mercou">
+    <img src="https://d2pn8kiwq2w21t.cloudfront.net/images/jpegPIA24589.width-800.jpg" data-full-src="https://d2pn8kiwq2w21t.cloudfront.net/images/jpegPIA24589.width-1600.jpg" alt="Ingenuity Helicopter's Shadow">
+  </div>
+
+  <div id="cornerVideoContainer">
+    <p>Important: Mars Sample Return</p>
+    <video id="cornerVideo" controls></video>
+    <button id="loadCornerVideoBtn">Load Important Video</button>
+  </div>
+
+  <input type="file" id="cornerVideoInput" accept="video/*" style="display:none">
+
+  <script>
+    // Default image (Wikimedia) — high resolution
+    const defaultImage = 'https://upload.wikimedia.org/wikipedia/commons/0/02/PIA23499-16.jpg';
+
+    const img = document.getElementById('zoomImg');
+    const imgWrap = document.getElementById('imgWrap');
+    const viewer = document.getElementById('viewer');
+    const gallery = document.getElementById('gallery');
+    const spinner = document.getElementById('spinner');
+    const zoomControls = ['zoomIn', 'zoomOut', 'reset'];
+
+    // transform state
+    let scale = 1; // current zoom
+    let minScale = 0.5;
+    let maxScale = 8;
+    let translateX = 0; // in px
+    let translateY = 0;
+
+    // dragging state
+    let dragging = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    // touch pinch
+    let pinchDist = 0;
+    let pinchCenter = null;
+
+    function applyTransform(){
+      imgWrap.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    }
+
+    function resetView(){
+      scale = 1; translateX = 0; translateY = 0; applyTransform();
+      // center image to viewer
+      fitImageToViewer();
+    }
+
+    function fitImageToViewer(){
+      if (!img.naturalWidth) return;
+      const vw = viewer.clientWidth;
+      const vh = viewer.clientHeight;
+      const iw = img.naturalWidth;
+      const ih = img.naturalHeight;
+      const ratio = Math.min(vw/iw, vh/ih);
+      scale = ratio;
+      // center
+      const cx = (vw - iw*scale)/2;
+      const cy = (vh - ih*scale)/2;
+      translateX = cx;
+      translateY = cy;
+      applyTransform();
+    }
+
+    function clampScale(s){
+      return Math.max(minScale, Math.min(maxScale, s));
+    }
+
+    // wheel zoom centered on cursor
+    viewer.addEventListener('wheel', function(e){
+      e.preventDefault();
+      if (!img.naturalWidth) return;
+      const rect = img.getBoundingClientRect();
+      const mx = e.clientX - rect.left; // mouse relative to image element
+      const my = e.clientY - rect.top;
+      const prevScale = scale;
+      const delta = e.deltaY < 0 ? 1.2 : 1/1.2;
+      scale = clampScale(scale * delta);
+      // adjust translate so point under cursor remains under cursor
+      translateX -= (mx/prevScale - mx/scale);
+      translateY -= (my/prevScale - my/scale);
+      applyTransform();
+    }, { passive: false });
+
+    // mouse drag to pan
+    imgWrap.addEventListener('mousedown', function(e){
+      dragging = true; imgWrap.classList.add('dragging'); lastX = e.clientX; lastY = e.clientY; e.preventDefault();
+    });
+    window.addEventListener('mousemove', function(e){
+      if (!dragging) return;
+      const dx = e.clientX - lastX; const dy = e.clientY - lastY;
+      translateX += dx; translateY += dy; lastX = e.clientX; lastY = e.clientY; applyTransform();
+    });
+    window.addEventListener('mouseup', function(){ dragging = false; imgWrap.classList.remove('dragging'); });
+
+    // touch: pan and pinch
+    viewer.addEventListener('touchstart', function(e){
+      if (e.touches.length === 1){
+        dragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+      } else if (e.touches.length === 2){
+        dragging = false; pinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        pinchCenter = { x: (e.touches[0].clientX + e.touches[1].clientX)/2, y: (e.touches[0].clientY + e.touches[1].clientY)/2 };
+      }
+    }, { passive: true });
+
+    viewer.addEventListener('touchmove', function(e){
+      if (e.touches.length === 1 && dragging){
+        const dx = e.touches[0].clientX - lastX; const dy = e.touches[0].clientY - lastY;
+        translateX += dx; translateY += dy; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; applyTransform();
+      } else if (e.touches.length === 2){
+        const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        if (pinchDist && pinchCenter){
+          const prevScale = scale;
+          const delta = dist / pinchDist;
+          scale = clampScale(scale * delta);
+          // adjust translate to keep pincenter stable
+          const rect = img.getBoundingClientRect();
+          const mx = pinchCenter.x - rect.left; const my = pinchCenter.y - rect.top;
+          translateX -= (mx/prevScale - mx/scale);
+          translateY -= (my/prevScale - my/scale);
+          applyTransform();
+          pinchDist = dist;
+        }
+      }
+    }, { passive: true });
+
+    viewer.addEventListener('touchend', function(e){ if (e.touches.length === 0) { dragging = false; pinchDist = 0; pinchCenter = null; imgWrap.classList.remove('dragging'); } }, { passive: true });
+
+    // controls
+    document.getElementById('zoomIn').addEventListener('click', ()=>{
+      const vw = viewer.clientWidth/2, vh = viewer.clientHeight/2; // center
+      const rect = img.getBoundingClientRect();
+      const mx = vw - rect.left; const my = vh - rect.top;
+      const prevScale = scale; scale = clampScale(scale * 1.2);
+      translateX -= (mx/prevScale - mx/scale);
+      translateY -= (my/prevScale - my/scale);
+      applyTransform();
+    });
+    document.getElementById('zoomOut').addEventListener('click', ()=>{
+      const vw = viewer.clientWidth/2, vh = viewer.clientHeight/2;
+      const rect = img.getBoundingClientRect();
+      const mx = vw - rect.left; const my = vh - rect.top;
+      const prevScale = scale; scale = clampScale(scale / 1.2);
+      translateX -= (mx/prevScale - mx/scale);
+      translateY -= (my/prevScale - my/scale);
+      applyTransform();
+    });
+    document.getElementById('reset').addEventListener('click', ()=>{ fitImageToViewer(); });
+    
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+
+    function getGalleryImages() {
+        return Array.from(gallery.querySelectorAll('img'));
+    }
+
+    function switchImage(direction) {
+        const thumbnails = getGalleryImages();
+        const currentSrc = img.src;
+        let currentIndex = thumbnails.findIndex(thumb => thumb.dataset.fullSrc === currentSrc || thumb.src === currentSrc);
+
+        if (currentIndex === -1) { // If current image not in gallery, start from first
+            currentIndex = 0;
+        }
+
+        let nextIndex = currentIndex + direction;
+
+        if (nextIndex >= thumbnails.length) {
+            nextIndex = 0; // Wrap around to the first image
+        } else if (nextIndex < 0) {
+            nextIndex = thumbnails.length - 1; // Wrap around to the last image
+        }
+
+        const nextThumb = thumbnails[nextIndex];
+        if (nextThumb && nextThumb.dataset.fullSrc) {
+            loadImage(nextThumb.dataset.fullSrc);
+        }
+    }
+
+    prevBtn.addEventListener('click', () => switchImage(-1));
+    nextBtn.addEventListener('click', () => switchImage(1));
+
+
+    // drag-drop
+    viewer.addEventListener('dragover', e=>e.preventDefault());
+    viewer.addEventListener('drop', e=>{
+      e.preventDefault();
+      const f = e.dataTransfer.files && e.dataTransfer.files[0];
+      if(!f) return;
+      if (f.type.startsWith('image/')) {
+        const url = URL.createObjectURL(f);
+        loadImage(url);
+      } else {
+        alert('Drop an image file to view it.');
+      }
+    });
+
+    function loadImage(url){
+      spinner.style.display = 'block';
+      img.style.opacity = '0.5';
+      img.src = url;
+      img.onload = function(){
+        spinner.style.display = 'none';
+        img.style.opacity = '1';
+        // reset scale and center to fit
+        fitImageToViewer();
+        // update active thumbnail
+        const thumbnails = gallery.querySelectorAll('img');
+        thumbnails.forEach(thumb => {
+            if (thumb.dataset.fullSrc === url) {
+                thumb.classList.add('active');
+            } else {
+                thumb.classList.remove('active');
+            }
+        });
+      };
+      img.onerror = function(){ 
+        spinner.style.display = 'none';
+        img.style.opacity = '1';
+        alert('Failed to load image. Try a different URL.'); 
+      };
+    }
+
+    // gallery handler
+    gallery.addEventListener('click', (e) => {
+        if (e.target.tagName === 'IMG' && e.target.dataset.fullSrc) {
+            loadImage(e.target.dataset.fullSrc);
+        }
+    });
+
+    // Corner Video loader
+    const cornerVideo = document.getElementById('cornerVideo');
+    const loadCornerVideoBtn = document.getElementById('loadCornerVideoBtn');
+    const cornerVideoInput = document.getElementById('cornerVideoInput');
+    const cornerVideoPrompt = document.querySelector('#cornerVideoContainer p');
+
+    loadCornerVideoBtn.addEventListener('click', () => cornerVideoInput.click());
+    cornerVideoInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const url = URL.createObjectURL(file);
+        cornerVideo.src = url;
+        cornerVideo.style.display = 'block';
+        cornerVideo.play();
+        loadCornerVideoBtn.style.display = 'none';
+        cornerVideoPrompt.style.display = 'none';
+        cornerVideoInput.value = ''; // Reset for next selection
+    });
+
+    // initialize
+    const firstImage = gallery.querySelector('img');
+    if (firstImage && firstImage.dataset.fullSrc) {
+        loadImage(firstImage.dataset.fullSrc);
+    }
+
+    // keyboard shortcuts
+    window.addEventListener('keydown', (e)=>{
+      if(e.key==='+'||e.key==='=') document.getElementById('zoomIn').click();
+      if(e.key==='-') document.getElementById('zoomOut').click();
+      if(e.key==='0') document.getElementById('reset').click();
+      if(e.key==='ArrowLeft') document.getElementById('prevBtn').click();
+      if(e.key==='ArrowRight') document.getElementById('nextBtn').click();
+    });
+  </script>
+</body>
+</html>
