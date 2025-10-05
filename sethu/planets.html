@@ -268,7 +268,32 @@
       more.innerText = 'More';
       more.addEventListener('click', (ev) => {
         ev.stopPropagation();
-        window.location.href = `./planet.html?name=${encodeURIComponent(b.name)}`;
+        // Special-cases for planets with dedicated pages
+        if (b.name === 'Mercury') {
+          window.location.href = `./mercury/index.html`;
+        } else if (b.name === 'Venus') {
+          // Venus dedicated page
+          window.location.href = `../ganesh/venus/index.html`;
+        } else if (b.name === 'Earth') {
+          // Earth dedicated page
+          window.location.href = `../ganesh/Earth/index.html`;
+        } else if (b.name === 'Mars') {
+          window.location.href = `./mars/m.html`;
+        } else if (b.name === 'Jupiter') {
+          // Jupiter dedicated page (created as m.html redirect)
+          window.location.href = `../gokul/jupiter/m.html`;
+        } else if (b.name === 'Saturn') {
+          // Saturn dedicated page (direct index)
+          window.location.href = `../gokul/saturn/index.html`;
+        } else if (b.name === 'Uranus') {
+          // Uranus dedicated page (ganesh copy)
+          window.location.href = `../ganesh/Uranus/index.html`;
+        } else if (b.name === 'Neptune') {
+          // Neptune dedicated page (ganesh copy)
+          window.location.href = `../ganesh/neptune/index.html`;
+        } else {
+          window.location.href = `./planet.html?name=${encodeURIComponent(b.name)}`;
+        }
       });
       info.appendChild(more);
       el.appendChild(info);
@@ -279,7 +304,32 @@
       btn.innerText = 'i';
       btn.addEventListener('click', (ev) => {
         ev.stopPropagation();
-        window.location.href = `./planet.html?name=${encodeURIComponent(b.name)}`;
+        // Special-cases for planets with dedicated pages
+        if (b.name === 'Mercury') {
+          window.location.href = `./mercury/index.html`;
+        } else if (b.name === 'Venus') {
+          // Venus dedicated page
+          window.location.href = `../ganesh/venus/index.html`;
+        } else if (b.name === 'Earth') {
+          // Earth dedicated page
+          window.location.href = `../ganesh/Earth/index.html`;
+        } else if (b.name === 'Mars') {
+          window.location.href = `./mars/m.html`;
+        } else if (b.name === 'Jupiter') {
+          // Jupiter dedicated page (created as m.html redirect)
+          window.location.href = `../gokul/jupiter/m.html`;
+        } else if (b.name === 'Saturn') {
+          // Saturn dedicated page (direct index)
+          window.location.href = `../gokul/saturn/index.html`;
+        } else if (b.name === 'Uranus') {
+          // Uranus dedicated page (ganesh copy)
+          window.location.href = `../ganesh/Uranus/index.html`;
+        } else if (b.name === 'Neptune') {
+          // Neptune dedicated page (ganesh copy)
+          window.location.href = `../ganesh/neptune/index.html`;
+        } else {
+          window.location.href = `./planet.html?name=${encodeURIComponent(b.name)}`;
+        }
       });
       el.appendChild(btn);
 
