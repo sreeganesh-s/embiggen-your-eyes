@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Solar System – Pan & Zoom (with planet notes)</title>
+<style>
+  html, body { height: 100%; margin: 0; }
+  .viewport {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: radial-gradient(ellipse at center, #0a0e2a 0%, #000 70%);
+    cursor: grab;
+  }
+  .viewport.dragging { cursor: grabbing; }
+  .world {
+    position: absolute;
+    transform: translate(0px, 0px) scale(1);
+    transform-origin: 0 0;
+    will-change: transform;
+  }
+  .star { position: absolute; background:#fff; border-radius:50%; }
+
+  /* Decorative orbits must not capture events */
+  .orbit { pointer-events: none; }
+
+  /* Planet body is interactive */
+  .planet {
+    position: absolute; border-radius:50%;
+    display:flex; justify-content:center; align-items:center;
+    box-shadow: 0 0 12px rgba(255,255,255,0.25);
+    transition: box-shadow .2s, transform .2s;
+    z-index: 2; /* above orbits */
+  }
+  .planet:hover { transform: scale(1.15); z-index: 3; box-shadow:0 0 24px rgba(255,255,255,0.5); }
+
+  /* Tooltip/popup stays interactive and now has a hide delay */
+  .planet-info {
+    position:absolute; top:100%; left:50%; transform:translateX(-50%);
+    background:rgba(10,14,42,0.9); color:#e0e0ff; border:1px solid rgba(255,255,255,0.3);
+    border-radius:12px; padding:10px 12px; width:260px; margin-top:8px; text-align:left;
+    opacity:0; transition: opacity .25s ease;
+    pointer-events: auto;
+    z-index: 4;
+    font-size:0.95rem;
+  }
+  .planet:hover .planet-info,
+  .planet-info:hover { opacity:1; }
+
+  .planet:not(:hover) .planet-info:not(:hover) {
+    transition: opacity .25s ease .4s;
+  }
+
+  .planet-info .more-btn { pointer-events: auto; margin-top:8px; display:inline-block; }
+
+  /* small info button on planets */
+  .info-btn {
+    position:absolute; right:6px; bottom:6px; width:20px; height:20px; border-radius:50%;
+    background:rgba(255,255,255,0.12); color:#fff; display:flex; align-items:center; justify-content:center;
+    font-size:12px; cursor:pointer; border:1px solid rgba(255,255,255,0.12); backdrop-filter:blur(2px);
+    pointer-events: auto;
+  }
+
+  /* Sun wrapper */
+  .sun {
+    position:absolute; border-radius:50%;
+    z-index: 2;
+    pointer-events: auto;
+  }
+  .sun-label {
+    position: absolute; color:#ffd77a; text-shadow:0 0 8px rgba(255,200,80,0.6); font-weight:700; pointer-events:none;
+    transform: translate(-50%, -140%); white-space:nowrap; z-index: 3;
+  }
+
+  /* Planet skins */
+  .mercury{ width:25px;height:25px;background:linear-gradient(45deg,#a6a6a6,#8a8a8a);}
+  .venus{ width:45px;height:45px;background:linear-gradient(45deg,#e39e54,#d48940);}
+  .earth{ width:50px;height:50px;background:linear-gradient(45deg,#6b93d6,#3a6fc5); box-shadow:0 0 20px rgba(107,147,214,.5);}
+  .mars{ width:35px;height:35px;background:linear-gradient(45deg,#c1440e,#a8380c);}
+  .jupiter{ width:110px;height:110px;background:linear-gradient(45deg,#c9a175,#b89167);}
+  .saturn{ width:95px;height:95px;background:linear-gradient(45deg,#e4d191,#d4c181); position:relative;}
+  .saturn::after{
+    content:''; position:absolute; width:160px; height:25px; border-radius:50%;
+    background:linear-gradient(to bottom, rgba(210,180,140,.7), rgba(180,150,110,.4));
+    transform: translate(-50%, -50%) rotateX(75deg);
+    left:50%; top:50%;
+  }
+  .uranus{ width:70px;height:70px;background:linear-gradient(45deg,#d1e7e7,#b8d4d4);}
+  .neptune{ width:65px;height:65px;background:linear-gradient(45deg,#5b5ddf,#4a4ccf);}
+
+  .title {
+    position: fixed; top:20px; left:50%; transform:translateX(-50%);
+    color:#fff; font-size:2rem; text-shadow:0 0 20px #ffcc00; pointer-events:none;
+  }
+  .hud {
+    position: fixed; bottom:16px; left:50%; transform:translateX(-50%);
+    color:#fff; background:rgba(10,14,42,.8); border:1px solid rgba(255,255,255,.3);
+    border-radius:20px; padding:8px 14px; font-size:.9rem; backdrop-filter:blur(5px);
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(1); box-shadow: 0 0 50px #ff4500, 0 0 100px #ff8c00; }
+    100% { transform: scale(1.05); box-shadow: 0 0 70px #ff4500, 0 0 140px #ff8c00; }
+  }
+  @keyframes twinkle {
+    from { opacity:.3 }
+    to   { opacity:1 }
+  }
+</style>
+</head>
+<body>
+  <div class="title">Solar System – 360° Pan (with planet notes)</div>
+  <div class="viewport" id="viewport">
+    <div class="world" id="world"></div>
+  </div>
+  <div class="hud">Drag to pan • Wheel or pinch to zoom • Hover planets for info</div>
+
+<script>
+  const viewport = document.getElementById('viewport');
+  const world = document.getElementById('world');
+
+  let panX = -2000;
+  let panY = -2000;
+  let scale = 1;
+  const minScale = 0.3, maxScale = 2.5;
+
+  function applyTransform() {
+    world.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+  }
+
+  function makeStars(count = 800, area = 10000) {
+    for (let i = 0; i < count; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      const x = Math.random() * area;
+      const y = Math.random() * area;
+      const size = Math.random() * 2.5 + 0.5;
+      s.style.left = `${x}px`;
+      s.style.top = `${y}px`;
+      s.style.width = `${size}px`;
+      s.style.height = `${size}px`;
+      s.style.opacity = (Math.random() * 0.7 + 0.3).toFixed(2);
+      s.style.animation = `twinkle ${3 + Math.random()*5}s infinite alternate ${Math.random()*5}s`;
+      world.appendChild(s);
+    }
+  }
+
+  function addOrbit(x, y, r) {
+    const orbit = document.createElement('div');
+    orbit.className = 'orbit';
+    orbit.style.position = 'absolute';
+    orbit.style.left = `${x - r}px`;
+    orbit.style.top = `${y - r}px`;
+    orbit.style.width = `${r * 2}px`;
+    orbit.style.height = `${r * 2}px`;
+    orbit.style.border = '1px dashed rgba(255,255,255,0.15)';
+    orbit.style.borderRadius = '50%';
+    orbit.style.pointerEvents = 'none';
+    world.appendChild(orbit);
+  }
+
+  const bodies = [
+    { name:'Sun', size:180, x: 4000, y: 4000, isSun:true, desc:`Star at system center.` },
+    { name:'Mercury', class:'mercury', size:25,  x: 4200, y: 4000, desc:`-> Closest planet to the Sun (avg ~58 million km).\n-> Smallest planet, slightly larger than Earth's Moon.\n-> Almost no atmosphere → extreme temps (~+430°C day, ~-180°C night).\n-> Heavily cratered surface.\n-> Year: 88 Earth days.` },
+    { name:'Venus',   class:'venus',   size:45,  x: 4400, y: 4000, desc:`-> Second planet from Sun; similar size to Earth.\n-> Thick CO2 atmosphere with sulfuric acid clouds → strong greenhouse effect.\n-> Surface temp ~465°C (hottest planet).\n-> Retrograde rotation (spins opposite most planets).\n-> A Venus day (rotation) is longer than its year.` },
+    { name:'Earth',   class:'earth',   size:50,  x: 4600, y: 4000, desc:`-> Third planet; only known world with life.\n-> Atmosphere: ~78% N2, 21% O2; supports breathable air and water cycle.\n-> ~70% covered by liquid water.\n-> One natural satellite: the Moon.\n-> Has a protective magnetic field and active plate tectonics.` },
+    { name:'Mars',    class:'mars',    size:35,  x: 4900, y: 4000, desc:`-> Fourth planet, the Red Planet (iron oxide surface).\n-> Home to Olympus Mons (largest volcano) and Valles Marineris (huge canyon).\n-> Thin CO2 atmosphere; global dust storms possible.\n-> Polar ice caps of water and CO2.\n-> Two small moons: Phobos and Deimos.\n-> High interest for past/present microbial life studies.` },
+    { name:'Jupiter', class:'jupiter', size:110, x: 5600, y: 4000, desc:`-> Fifth planet and the solar system's largest.\n-> Gas giant (H2/He) with no solid surface.\n-> Famous Great Red Spot (long-lived storm).\n-> Has a faint ring system and strong magnetic field.\n-> 90+ moons: Ganymede (largest moon), Europa (suspected subsurface ocean).` },
+    { name:'Saturn',  class:'saturn',  size:95,  x: 6500, y: 4000, desc:`-> Sixth planet; gas giant known for bright ring system (ice & rock).\n-> Very low average density (could float in a giant ocean theoretically).\n-> 80+ moons: Titan (has a dense atmosphere and lakes of hydrocarbons).\n-> Rings divided into A, B, C, etc. sections.` },
+    { name:'Uranus',  class:'uranus',  size:70,  x: 7600, y: 4000, desc:`-> Seventh planet; an ice giant (methane gives blue-green color).\n-> Unique axial tilt (~98°) — rotates on its side.\n-> Extremely cold (around -224°C).\n-> Faint rings and 27+ moons (e.g., Titania, Oberon).\n-> Orbital period: ~84 Earth years.` },
+    { name:'Neptune', class:'neptune', size:65,  x: 8800, y: 4000, desc:`-> Eighth planet and farthest from the Sun.\n-> Deep blue color from methane.\n-> Has the strongest winds in the solar system (up to ~2100 km/h).\n-> At least 14 moons; Triton is largest and orbits retrograde.\n-> Orbital period: ~165 Earth years.` }
+  ];
+
+  function renderBodies() {
+    // Sun
+    const sunWrap = document.createElement('div');
+    sunWrap.className = 'sun';
+    sunWrap.style.left = `${bodies[0].x - bodies[0].size/2}px`;
+    sunWrap.style.top  = `${bodies[0].y - bodies[0].size/2}px`;
+    sunWrap.style.width = `${bodies[0].size}px`;
+    sunWrap.style.height = `${bodies[0].size}px`;
+
+    const sunCore = document.createElement('div');
+    sunCore.style.width = '100%';
+    sunCore.style.height = '100%';
+    sunCore.style.borderRadius = '50%';
+    sunCore.style.background = 'radial-gradient(circle, #ffd700, #ff8c00, #ff4500)';
+    sunCore.style.boxShadow = '0 0 50px #ff4500, 0 0 120px #ff8c00';
+    sunCore.style.animation = 'pulse 4s infinite alternate';
+    sunWrap.appendChild(sunCore);
+
+    sunWrap.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const rect = viewport.getBoundingClientRect();
+      const screenCx = rect.width / 2;
+      const screenCy = rect.height / 2;
+      panX = screenCx - bodies[0].x * scale;
+      panY = screenCy - bodies[0].y * scale;
+      applyTransform();
+    });
+    world.appendChild(sunWrap);
+
+    const sunLabel = document.createElement('div');
+    sunLabel.className = 'sun-label';
+    sunLabel.style.left = `${bodies[0].x}px`;
+    sunLabel.style.top = `${bodies[0].y}px`;
+    sunLabel.textContent = 'Sun';
+    world.appendChild(sunLabel);
+
+    const sunPopup = document.createElement('div');
+    sunPopup.className = 'planet-info';
+    sunPopup.style.left = `${bodies[0].x}px`;
+    sunPopup.style.top = `${bodies[0].y + bodies[0].size/2 + 8}px`;
+    sunPopup.style.opacity = 0;
+    sunPopup.innerHTML = `<div style="color:#ffcc00;font-weight:700">Sun</div><div style="margin-top:6px;white-space:pre-line">${bodies[0].desc}</div>`;
+    const sunMore = document.createElement('button');
+    sunMore.className = 'more-btn';
+    sunMore.textContent = 'More';
+    sunMore.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      window.location.href = `./planet.html?name=Sun`;
+    });
+    sunPopup.appendChild(sunMore);
+    world.appendChild(sunPopup);
+
+    let sunHideTimer = null;
+    const sunHideDelayMs = 400;
+    function showSunPopup() {
+      if (sunHideTimer) { clearTimeout(sunHideTimer); sunHideTimer = null; }
+      sunPopup.style.opacity = 1;
+    }
+    function hideSunPopupDelayed() {
+      if (sunHideTimer) clearTimeout(sunHideTimer);
+      sunHideTimer = setTimeout(() => {
+        sunPopup.style.opacity = 0;
+        sunHideTimer = null;
+      }, sunHideDelayMs);
+    }
+    sunWrap.addEventListener('mouseenter', showSunPopup);
+    sunWrap.addEventListener('mouseleave', hideSunPopupDelayed);
+    sunPopup.addEventListener('mouseenter', showSunPopup);
+    sunPopup.addEventListener('mouseleave', hideSunPopupDelayed);
+
+    // Orbits
+    const center = { x: bodies[0].x, y: bodies[0].y };
+    const radii = [200, 400, 600, 900, 1600, 2500, 3600, 4800];
+    radii.forEach(r => addOrbit(center.x, center.y, r));
+
+    // Planets
+    for (let i = 1; i < bodies.length; i++) {
+      const b = bodies[i];
+      const el = document.createElement('div');
+      el.className = `planet ${b.class}`;
+      el.style.left = `${b.x - b.size/2}px`;
+      el.style.top  = `${b.y - b.size/2}px`;
+      el.style.width = `${b.size}px`;
+      el.style.height = `${b.size}px`;
+
+      const info = document.createElement('div');
+      info.className = 'planet-info';
+      info.innerHTML = `
+        <div style="color:#ffcc00;font-weight:700">${b.name}</div>
+        <div style="margin-top:6px;white-space:pre-line">${b.desc}</div>
+      `;
+      const more = document.createElement('button');
+      more.className = 'more-btn';
+      more.innerText = 'More';
+      more.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        window.location.href = `./planet.html?name=${encodeURIComponent(b.name)}`;
+      });
+      info.appendChild(more);
+      el.appendChild(info);
+
+      const btn = document.createElement('div');
+      btn.className = 'info-btn';
+      btn.title = `More about ${b.name}`;
+      btn.innerText = 'i';
+      btn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        window.location.href = `./planet.html?name=${encodeURIComponent(b.name)}`;
+      });
+      el.appendChild(btn);
+
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const rect = viewport.getBoundingClientRect();
+        const screenCx = rect.width / 2;
+        const screenCy = rect.height / 2;
+        panX = screenCx - b.x * scale;
+        panY = screenCy - b.y * scale;
+        applyTransform();
+      });
+
+      world.appendChild(el);
+    }
+  }
+
+  let dragging = false;
+  let lastX = 0, lastY = 0;
+
+  function getPoint(e) {
+    if (e.touches && e.touches[0]) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    return { x: e.clientX, y: e.clientY };
+  }
+
+  function onPointerDown(e) {
+    dragging = true;
+    viewport.classList.add('dragging');
+    const p = getPoint(e);
+    lastX = p.x; lastY = p.y;
+  }
+  function onPointerMove(e) {
+    if (!dragging) return;
+    const p = getPoint(e);
+    const dx = p.x - lastX;
+    const dy = p.y - lastY;
+    panX += dx;
+    panY += dy;
+    lastX = p.x;
+    lastY = p.y;
+    applyTransform();
+  }
+  function onPointerUp() {
+    dragging = false;
+    viewport.classList.remove('dragging');
+  }
+
+  viewport.addEventListener('mousedown', onPointerDown);
+  window.addEventListener('mousemove', onPointerMove);
+  window.addEventListener('mouseup', onPointerUp);
+
+  viewport.addEventListener('touchstart', onPointerDown, { passive: true });
+  viewport.addEventListener('touchmove', onPointerMove, { passive: true });
+  window.addEventListener('touchend', onPointerUp);
+
+  viewport.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const rect = viewport.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const worldX = (mouseX - panX) / scale;
+    const worldY = (mouseY - panY) / scale;
+
+    const delta = Math.sign(e.deltaY) * -0.1;
+    const newScale = Math.min(maxScale, Math.max(minScale, scale * (1 + delta)));
+
+    panX = mouseX - worldX * newScale;
+    panY = mouseY - worldY * newScale;
+    scale = newScale;
+    applyTransform();
+  }, { passive: false });
+
+  window.addEventListener('keydown', (e) => {
+    const step = 40;
+    if (e.key === 'ArrowUp')   { panY += step; applyTransform(); }
+    if (e.key === 'ArrowDown') { panY -= step; applyTransform(); }
+    if (e.key === 'ArrowLeft') { panX += step; applyTransform(); }
+    if (e.key === 'ArrowRight'){ panX -= step; applyTransform(); }
+  });
+
+  makeStars();
+  renderBodies();
+  applyTransform();
+</script>
+</body>
+</html>
+

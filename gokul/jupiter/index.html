@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jupiter — Eyes on the Solar System</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <h1>Jupiter</h1>
+      <p class="subtitle">The fifth planet from the Sun — a massive gas giant with swirling storms, colorful bands, and dozens of moons including the volcanic Io and icy Europa.</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="hero" class="card">
+      <div class="hero-left">
+        <img id="heroImage" src="https://starwalk.space/gallery/images/jupiter-guide/1920x1080.jpg" alt="Jupiter from Star Walk" />
+      </div>
+      <div class="hero-right">
+        <h2>Quick facts</h2>
+        <ul id="factsList"></ul>
+        <div class="actions">
+          <button id="showGallery">Show gallery</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="gallerySection" class="card" style="display:none">
+      <h2>Gallery</h2>
+      <div id="gallery" class="gallery"></div>
+    </section>
+
+    <section id="featuresSection" class="card">
+      <h2>Notable surface features</h2>
+      <div id="features" class="features"></div>
+    </section>
+
+    <section id="missionsSection" class="card">
+      <h2>Missions & landers</h2>
+      <div id="missions" class="missions"></div>
+    </section>
+
+    <section id="about" class="card">
+      <h2>About this page</h2>
+      <p>This page is a compact reference about Jupiter using public images and data. Images are hosted on public services (NASA / Wikimedia / Star Walk). Use the gallery to browse images and click any thumbnail to load it in the hero viewer. You can also drag & drop an image file into the hero area.</p>
+    </section>
+
+    <footer class="card footer">
+      <small>Image credits: NASA, JPL, Star Walk, Wikimedia Commons, Interesting Engineering, Future PLC, DeviantArt, WallpaperAccess. Built for demonstration.</small>
+    </footer>
+  </main>
+
+  <script type="module" src="jupiter-data.js"></script>
+  <script type="module" src="main.js"></script>
+</body>
+</html>

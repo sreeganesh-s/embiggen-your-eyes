@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Saturn — Eyes on the Solar System</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <h1>Saturn</h1>
+      <p class="subtitle">The sixth planet from the Sun — a majestic gas giant with iconic rings and fascinating moons like Titan and Enceladus.</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="hero" class="card">
+      <div class="hero-left">
+        <img id="heroImage" src="" alt="Saturn" />
+      </div>
+      <div class="hero-right">
+        <h2>Quick facts</h2>
+        <ul id="factsList"></ul>
+        <div class="actions">
+          <button id="showGallery">Show gallery</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="gallerySection" class="card" style="display:none">
+      <h2>Gallery</h2>
+      <div id="gallery" class="gallery"></div>
+    </section>
+
+    <section id="featuresSection" class="card">
+      <h2>Notable surface features</h2>
+      <div id="features" class="features"></div>
+    </section>
+
+    <section id="missionsSection" class="card">
+      <h2>Missions & landers</h2>
+      <div id="missions" class="missions"></div>
+    </section>
+
+    <footer class="card footer">
+      <small>Image credits: NASA, JPL, Geo.tv, Bing Images, Earth.com, Britannica, Pinterest. Built for demonstration.</small>
+    </footer>
+  </main>
+
+  <script src="saturn.js"></script>
+</body>
+</html>

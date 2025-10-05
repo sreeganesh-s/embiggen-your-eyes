@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Venus — Eyes on the Solar System</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <h1>Venus</h1>
+      <p class="subtitle">The second planet from the Sun — dense atmosphere, extreme heat, and a fascinating history of exploration.</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="hero" class="card">
+      <div class="hero-left">
+        <img id="heroImage" src="" alt="Venus"/>
+      </div>
+      <div class="hero-right">
+        <h2>Quick facts</h2>
+        <ul id="factsList"></ul>
+        <div class="actions">
+          <button id="showGallery">Show gallery</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="gallerySection" class="card" style="display:none">
+      <h2>Gallery</h2>
+      <div id="gallery" class="gallery"></div>
+    </section>
+
+    <section id="featuresSection" class="card">
+      <h2>Notable surface features</h2>
+      <div id="features" class="features"></div>
+    </section>
+
+    <section id="missionsSection" class="card">
+      <h2>Missions & landers</h2>
+      <div id="missions" class="missions"></div>
+    </section>
+
+    <section id="about" class="card">
+      <h2>About this page</h2>
+      <p>This page is a compact reference about Venus using public images and data. Images are hosted on public services (NASA / Wikimedia). Use the gallery to browse images and click any thumbnail to load it in the hero viewer. You can also drag & drop an image file into the hero area.</p>
+    </section>
+
+    <footer class="card footer">
+      <small>Image credits: NASA, JPL, Magellan, Wikimedia Commons (where indicated). Built for demonstration.</small>
+    </footer>
+  </main>
+
+  <script type="module" src="venus-data.js"></script>
+  <script type="module">
+    import { venusData } from './venus-data.js';
+
+    const heroImage = document.getElementById('heroImage');
+    const factsList = document.getElementById('factsList');
+    const galleryEl = document.getElementById('gallery');
+    const featuresEl = document.getElementById('features');
+    const missionsEl = document.getElementById('missions');
+    const gallerySection = document.getElementById('gallerySection');
+  const showGalleryBtn = document.getElementById('showGallery');
+
+    // populate hero and facts
+    heroImage.src = venusData.images[0].url;
+    heroImage.alt = venusData.images[0].title || 'Venus';
+
+    const facts = venusData.facts;
+    factsList.innerHTML = '';
+    [['Name', facts.name], ['Radius (km)', facts.radius_km], ['Orbital period (days)', facts.orbital_period_days], ['Mean surface temp (°C)', facts.mean_surface_temp_c], ['Atmosphere', facts.atmosphere]].forEach(([k,v])=>{
+      const li = document.createElement('li'); li.innerHTML = `<strong>${k}:</strong> ${v}`; factsList.appendChild(li);
+    });
+
+    // gallery
+    function isImageUrl(url){
+      return /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(url);
+    }
+
+    function renderGallery(){
+      galleryEl.innerHTML = '';
+      venusData.images.forEach(item => {
+        // If the URL points to an image file, render a thumbnail that loads it in the hero
+        if (isImageUrl(item.url)){
+          const t = document.createElement('button');
+          t.className = 'thumb';
+          t.title = item.title || '';
+          t.innerHTML = `<img src="${item.url}" alt="${item.title || 'Venus'}"><div class="caption">${item.title || ''}</div>`;
+          t.addEventListener('click', ()=>{ heroImage.src = item.url; heroImage.alt = item.title || 'Venus'; });
+          galleryEl.appendChild(t);
+        } else {
+          // Non-image URL: render as a link card that opens the target in a new tab
+          const a = document.createElement('a');
+          a.className = 'thumb linkThumb';
+          a.href = item.url;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.title = item.title || item.url;
+          a.innerHTML = `<div class="linkInner"><div class="caption">${item.title || item.url}</div><div class="credit">${item.credit || ''}</div></div>`;
+          galleryEl.appendChild(a);
+        }
+      });
+    }
+
+    // features
+    venusData.features.forEach(f=>{
+      const div = document.createElement('article'); div.className='featureCard';
+      div.innerHTML = `<h3>${f.name}</h3><p class="muted">${f.type}</p><p>${f.description}</p><img src="${f.image}" alt="${f.name}"><p class="credit">${f.credit || ''}</p>`;
+      featuresEl.appendChild(div);
+    });
+
+    // missions
+    venusData.missions.forEach(m=>{
+      const d = document.createElement('div'); d.className='mission';
+      d.innerHTML = `<h4>${m.name} <small class="muted">(${m.year})</small></h4><p>${m.summary}</p><p class="credit">${m.credit || ''}</p>`;
+      missionsEl.appendChild(d);
+    });
+
+    showGalleryBtn.addEventListener('click', ()=>{
+      if (gallerySection.style.display === 'none'){
+        gallerySection.style.display = 'block'; renderGallery(); showGalleryBtn.textContent='Hide gallery';
+      } else {
+        gallerySection.style.display = 'none'; showGalleryBtn.textContent='Show gallery';
+      }
+    });
+
+
+
+    // drag-drop to viewer
+    const viewer = document.getElementById('hero');
+    const heroLeft = document.querySelector('.hero-left');
+    heroLeft.addEventListener('dragover', e=> e.preventDefault());
+    heroLeft.addEventListener('drop', e=>{
+      e.preventDefault();
+      const f = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!f) return;
+      if (f.type.startsWith('image/')){
+        heroImage.src = URL.createObjectURL(f);
+      } else alert('Drop an image file (PNG/JPG)');
+    });
+
+  </script>
+</body>
+</html>

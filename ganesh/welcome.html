@@ -288,7 +288,8 @@
       </h1>
       <div class="hero-subtitle">by <span class="team">chakkakkuru</span></div>
       <div class="hero-cta">
-        <button id="beginBtn">LET'S BEGIN</button>
+        <button id="solarBtn">Explore the Solar System</button>
+        <button id="universeBtn">Explore the Universe</button>
       </div>
     </div>
   </div>
@@ -372,17 +373,23 @@
         lookBtn.style.opacity = '0.6';
         lookBtn.style.cursor = 'not-allowed';
       }
-      // Begin button behavior
-      const beginBtn = document.getElementById('beginBtn');
+      // CTA button behaviors — pulse, then redirect
+      // The target pages already include their own assets.
       const hero = document.getElementById('hero');
-      if (beginBtn && hero) {
-        beginBtn.addEventListener('click', (e) => {
+      const solarBtn = document.getElementById('solarBtn');
+      const universeBtn = document.getElementById('universeBtn');
+      function handleCTAClick(targetHref) {
+        return (e) => {
           e.preventDefault();
-          hero.classList.add('begun');
-          // quick pulse and remove class after animation
-          setTimeout(() => hero.classList.remove('begun'), 400);
-        });
+          if (hero) hero.classList.add('begun');
+          setTimeout(() => {
+            if (hero) hero.classList.remove('begun');
+            window.location.href = targetHref;
+          }, 400);
+        };
       }
+      if (solarBtn) solarBtn.addEventListener('click', handleCTAClick('../sethu/planets.html'));
+      if (universeBtn) universeBtn.addEventListener('click', handleCTAClick('../chris/space_explorer/index.html'));
     })();
   </script>
 </body>

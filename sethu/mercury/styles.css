@@ -1,0 +1,30 @@
+/* styles.css — simple styling for the Mercury mini-site */
+:root{--bg:#060606;--card:#0e0e0e;--accent:#d49b2a}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#000,#060606);color:#eee;font-family:Inter,system-ui,Arial,Helvetica,sans-serif}
+.container{max-width:1100px;margin:0 auto;padding:20px}
+.site-header{padding:28px 0;border-bottom:1px solid rgba(255,255,255,0.03)}
+.site-header h1{margin:0;font-size:36px;color:var(--accent)}
+.subtitle{margin:8px 0 0;color:#bbb}
+.card{background:rgba(255,255,255,0.02);padding:18px;border-radius:10px;margin-top:18px}
+#hero{display:flex;gap:18px;align-items:center}
+.hero-left{flex:1;min-height:360px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border-radius:8px}
+.hero-left img{max-width:100%;max-height:88vh;border-radius:8px}
+.hero-right{width:320px}
+ul{padding-left:18px}
+.actions{margin-top:12px}
+.actions button{padding:8px 10px;background:var(--accent);border:none;color:#000;border-radius:6px;cursor:pointer;margin-right:8px}
+.gallery{display:flex;gap:12px;flex-wrap:wrap}
+.thumb{border-radius:8px;overflow:hidden;border:2px solid rgba(255,255,255,0.03);padding:0;background:transparent;cursor:pointer}
+.thumb img{width:180px;height:120px;object-fit:cover;display:block}
+.linkThumb{display:flex;align-items:center;justify-content:center;width:180px;height:120px;background:rgba(255,255,255,0.02);border-radius:8px;text-decoration:none;color:inherit;padding:8px}
+.linkThumb .linkInner{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.linkThumb .caption{font-size:13px;margin-bottom:6px}
+.linkThumb .credit{font-size:11px;color:#aaa}
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.featureCard img{width:100%;border-radius:6px;margin-top:8px}
+.missions .mission{margin-bottom:12px}
+.muted{color:#aaa}
+.credit{font-size:12px;color:#999}
+.footer{margin-top:30px;padding:12px;text-align:center;color:#777}
+@media (max-width:900px){#hero{flex-direction:column}.hero-right{width:100%}}
