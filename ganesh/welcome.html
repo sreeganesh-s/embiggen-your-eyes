@@ -288,7 +288,8 @@
       </h1>
       <div class="hero-subtitle">by <span class="team">chakkakkuru</span></div>
       <div class="hero-cta">
-        <button id="beginBtn">LET'S BEGIN</button>
+        <button id="solarBtn">Explore the Solar System</button>
+        <button id="universeBtn">Explore the Universe</button>
       </div>
     </div>
   </div>
@@ -372,23 +373,23 @@
         lookBtn.style.opacity = '0.6';
         lookBtn.style.cursor = 'not-allowed';
       }
-      // Begin button behavior — pulse, then redirect to the Space Explorer
-      // The target page already includes its own `styles.css` and `script.js`.
-      const beginBtn = document.getElementById('beginBtn');
+      // CTA button behaviors — pulse, then redirect
+      // The target pages already include their own assets.
       const hero = document.getElementById('hero');
-      if (beginBtn && hero) {
-        beginBtn.addEventListener('click', (e) => {
+      const solarBtn = document.getElementById('solarBtn');
+      const universeBtn = document.getElementById('universeBtn');
+      function handleCTAClick(targetHref) {
+        return (e) => {
           e.preventDefault();
-          hero.classList.add('begun');
-          // After the small pulse animation, navigate to the space explorer index.
+          if (hero) hero.classList.add('begun');
           setTimeout(() => {
-            // restore state (optional)
-            hero.classList.remove('begun');
-            // Redirect to the index that loads styles.css and script.js
-            window.location.href = '../chris/space_explorer/index.html';
+            if (hero) hero.classList.remove('begun');
+            window.location.href = targetHref;
           }, 400);
-        });
+        };
       }
+      if (solarBtn) solarBtn.addEventListener('click', handleCTAClick('../sethu/planets.html'));
+      if (universeBtn) universeBtn.addEventListener('click', handleCTAClick('../chris/space_explorer/index.html'));
     })();
   </script>
 </body>
